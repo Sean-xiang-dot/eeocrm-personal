@@ -119,5 +119,60 @@
     "rootCause": "销售易 OAuth2 password grant 登录后，数据权限由登录账号决定。用管理员账号（如 crm@eeoa.com）登录则能看到所有数据。没有 impersonate/runAs 机制，无法以其他用户身份代理查询。",
     "correctApproach": "如需按用户权限过滤数据，只能在应用层做：查询时加 WHERE ownerId = <userId> 条件，或查询全量后在返回前过滤。不要期望 API 自动做数据权限隔离（除非用该用户自己的账号密码登录）。",
     "category": "permission"
+  },
+  {
+    "id": "ep_seed_12",
+    "firstSeen": "2026-05-25T00:00:00Z",
+    "lastSeen": "2026-05-25T00:00:00Z",
+    "count": 1,
+    "toolName": "crm_soql_query",
+    "errorSignature": "crm_soql_query::SOQL and XOQL are the same thing",
+    "rootCause": "销售易官方把查询语言称为 XOQL（通过 neocrm CLI 的 data:query 命令），底层 REST API 路径是 GET /rest/data/v2/query?q={语句}。语法完全是 Salesforce SOQL 风格：SELECT fields FROM object WHERE conditions ORDER BY field LIMIT offset,count。我们代码里叫 SOQL，官方叫 XOQL，本质是同一个东西。",
+    "correctApproach": "和官方沟通时说 XOQL，自己代码里叫 SOQL 也行。注意 API 路径是 /rest/data/v2/query（v2 不是 v2.0），CRUD 路径是 /rest/data/v2.0/xobjects/{apiKey}。",
+    "category": "other"
+  },
+  {
+    "id": "ep_seed_13",
+    "firstSeen": "2026-05-25T00:00:00Z",
+    "lastSeen": "2026-05-25T00:00:00Z",
+    "count": 1,
+    "toolName": "crm_create_record",
+    "errorSignature": "crm_create_record::date/datetime field must be millisecond timestamp",
+    "rootCause": "date 和 datetime 类型的字段不接受字符串格式（如 \"2026-04-15\" 或 \"2026-04-15T10:30:00\"），必须传毫秒时间戳（Long 数字如 1776211200000）。传字符串会报「字段数据类型不匹配」。",
+    "correctApproach": "日期字段一律用 new Date(\"2026-04-15\").getTime() 转为毫秒时间戳。查询返回的日期也是时间戳，展示时需要转为人类可读格式。",
+    "category": "data-type"
+  },
+  {
+    "id": "ep_seed_14",
+    "firstSeen": "2026-05-25T00:00:00Z",
+    "lastSeen": "2026-05-25T00:00:00Z",
+    "count": 1,
+    "toolName": "crm_create_record",
+    "errorSignature": "crm_create_record::reference/owner field must be string ID not number",
+    "rootCause": "reference 和 owner 类型的字段（如 ownerId、accountId、contactId）值必须是字符串类型的 ID（如 \"921913753305571\"），传数字 921913753305571 会被截断或报类型错误（JS 大数精度丢失）。",
+    "correctApproach": "所有 ID 字段统一用 String(id) 处理。从 API 拿到的 ID 可能是数字，存储和传参时一律转字符串。",
+    "category": "data-type"
+  },
+  {
+    "id": "ep_seed_15",
+    "firstSeen": "2026-05-25T00:00:00Z",
+    "lastSeen": "2026-05-25T00:00:00Z",
+    "count": 1,
+    "toolName": "crm_soql_query",
+    "errorSignature": "crm_soql_query::query my data must filter by ownerId explicitly",
+    "rootCause": "用管理员账号（或任何有全局权限的账号）查询时，XOQL 不会自动按当前用户过滤。SELECT accountName FROM account 会返回全局数据。要查「我的客户」必须显式加 WHERE ownerId = userId。",
+    "correctApproach": "查「我的」数据：先获取当前用户 ID（auth:whoami 或登录时缓存的 userId），然后 WHERE ownerId = \"<userId>\"。查「某人的」数据：先 SELECT id, name FROM user WHERE name LIKE \"张三%\" 找到 userId，再按 ownerId 过滤。",
+    "category": "permission"
+  },
+  {
+    "id": "ep_seed_16",
+    "firstSeen": "2026-05-25T00:00:00Z",
+    "lastSeen": "2026-05-25T00:00:00Z",
+    "count": 1,
+    "toolName": "crm_soql_query",
+    "errorSignature": "crm_soql_query::XOQL pagination uses LIMIT offset,count syntax",
+    "rootCause": "销售易 XOQL 的分页语法是 LIMIT offset,count（如 LIMIT 0,100 表示从第 0 条开始取 100 条），不是标准 SQL 的 LIMIT count OFFSET offset。单次最多返回 100 条。",
+    "correctApproach": "首页: LIMIT 0,100；第二页: LIMIT 100,100；第三页: LIMIT 200,100。如果返回满 100 条说明还有更多数据。也可以用简写 LIMIT 100（等同 LIMIT 0,100）。",
+    "category": "soql-syntax"
   }
 ]

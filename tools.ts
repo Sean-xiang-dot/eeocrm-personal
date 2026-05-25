@@ -125,13 +125,16 @@ export function registerTools(server: McpServer, client: XiaoshouyiClient) {
   // ── 1. SOQL 查询 ──────────────────────────────────────
   server.tool(
     "crm_soql_query",
-    `执行 SOQL 查询语句，从销售易查询数据。
+    `执行 XOQL（销售易官方叫法）/ SOQL 查询语句，从销售易查询数据。
 常用标准对象 apiKey: account(客户), contact(联系人), opportunity(商机), lead(线索), task(任务), schedule(日程), activityrecord(活动记录), order(订单), quote(报价单), contract(合同), case(服务工单), product(产品)。
 自定义对象以 __c 结尾，如 Event__c。
 字段名使用 apiKey（如 id, accountName, ownerId），不确定字段名时先用 crm_describe_fields 查询。
 ⚠ LIKE 仅支持前缀匹配: accountName LIKE '华为%'（不支持 '%华为%'）。
 ⚠ 不支持 GROUP BY，需在客户端侧汇总。
 ⚠ ownerName 不是有效字段！要查负责人名称，先查 ownerId，再用 SELECT id, name FROM user WHERE id = <ownerId> 解析。
+⚠ 查"我的"数据必须显式加 WHERE ownerId = '<我的userId>'，不会自动过滤。
+⚠ 分页语法: LIMIT offset,count（如 LIMIT 100,100 取第二页），单次最多 100 条。
+⚠ date/datetime 字段返回毫秒时间戳，不是字符串。
 名称字段速查: account→accountName, contact→contactName, opportunity→opportunityName, lead→name, product→productName, priceBook→name, order→用id。
 常用关联字段: ownerId(负责人 ID, 所有对象通用), createdBy(创建人 ID), phone(客户电话, account 上)。
 示例: SELECT id, accountName FROM account WHERE accountName LIKE '华为%' LIMIT 20`,

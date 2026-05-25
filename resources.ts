@@ -122,11 +122,15 @@ export function registerResources(server: McpServer, client: XiaoshouyiClient) {
 - 字段 apiKey 驼峰: accountName, opportunityName, money
 - 金额字段: opportunity 用 **money** (不是 amount)
 - 创建/更新请求体: \`{ data: { ...fields } }\`
-- SOQL: \`GET /rest/data/v2/query\` (v2 不是 v2.0)
+- XOQL 查询: \`GET /rest/data/v2/query\` (v2 不是 v2.0)，官方称 XOQL，语法同 Salesforce SOQL
 - CRUD: \`/rest/data/v2.0/xobjects/{apiKey}\`
 - 创建记录需要 entityType + dimDepart，工具已自动填充
 - **ownerName 不存在**！要查负责人姓名，先查 ownerId，再 \`SELECT id, name FROM user WHERE id = <ownerId>\`
 - 数据权限由登录账号决定，无 impersonate/runAs 机制。如需按用户过滤，应用层加 WHERE ownerId 条件
+- date/datetime 字段值是**毫秒时间戳**（Long），不是日期字符串
+- reference/owner 类型的 ID 必须用**字符串**传参（JS 大数精度问题）
+- picklist 字段传 selectitem 的 value（数字字符串如 \`"1"\`），不是 label（如"互联网"）
+- 分页: \`LIMIT offset,count\`（如 \`LIMIT 100,100\` 取第二页），单次最多 100 条
 `;
       return {
         contents: [{
