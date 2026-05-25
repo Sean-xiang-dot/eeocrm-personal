@@ -1,0 +1,101 @@
+[
+  {
+    "id": "ep_seed_01",
+    "firstSeen": "2026-03-25T00:00:00Z",
+    "lastSeen": "2026-03-25T00:00:00Z",
+    "count": 5,
+    "toolName": "crm_soql_query",
+    "errorSignature": "crm_soql_query::column not exist[<VAL>]",
+    "rootCause": "各对象的名称字段不统一。account用accountName，contact用contactName，opportunity用opportunityName，lead用name，product用productName，order没有名称字段。不能统一用name。",
+    "correctApproach": "查看 field-reference.md 或 SKILL.md 中的名称字段速查表。不确定时先调 crm_describe_fields。",
+    "category": "field-name"
+  },
+  {
+    "id": "ep_seed_02",
+    "firstSeen": "2026-03-25T00:00:00Z",
+    "lastSeen": "2026-03-25T00:00:00Z",
+    "count": 3,
+    "toolName": "crm_soql_query",
+    "errorSignature": "crm_soql_query::unsupport like expression pattern",
+    "rootCause": "销售易 SOQL 的 LIKE 运算符仅支持前缀匹配（'xxx%'），不支持 '%xxx%' 或 '%xxx' 模式。",
+    "correctApproach": "LIKE 条件只用 'keyword%' 格式（前缀匹配）。如需包含搜索，先拉取再在客户端筛选。",
+    "category": "soql-syntax"
+  },
+  {
+    "id": "ep_seed_03",
+    "firstSeen": "2026-03-25T00:00:00Z",
+    "lastSeen": "2026-03-25T00:00:00Z",
+    "count": 2,
+    "toolName": "crm_create_record",
+    "errorSignature": "crm_create_record::itemType=4 picklist field type mismatch",
+    "rootCause": "itemType=4 的字段（单选/多选 picklist）值必须是数组格式，如 [1]，传标量 1 或 '1' 会报错。",
+    "correctApproach": "系统已自动包裹 itemType=4 字段为数组。如果绕过createRecord直接调API，记得传数组。",
+    "category": "data-type"
+  },
+  {
+    "id": "ep_seed_04",
+    "firstSeen": "2026-03-25T00:00:00Z",
+    "lastSeen": "2026-03-25T00:00:00Z",
+    "count": 3,
+    "toolName": "crm_soql_query",
+    "errorSignature": "crm_soql_query::unsupport group by",
+    "rootCause": "销售易 SOQL 不支持 GROUP BY 语法，无法在服务端做聚合。",
+    "correctApproach": "先查询原始数据，再在客户端侧做分组汇总统计。",
+    "category": "soql-syntax"
+  },
+  {
+    "id": "ep_seed_05",
+    "firstSeen": "2026-03-25T00:00:00Z",
+    "lastSeen": "2026-03-25T00:00:00Z",
+    "count": 2,
+    "toolName": "crm_create_record",
+    "errorSignature": "crm_create_record::entityType/dimDepart required",
+    "rootCause": "创建任何记录都需要 entityType（业务类型）和 dimDepart（所属部门），这是销售易的硬性要求。",
+    "correctApproach": "使用业务专用工具（crm_create_quote等）会自动填充。通用 crm_create_record 也会自动注入当前用户的 dimDepart，entityType 需从已有记录取样。",
+    "category": "body-format"
+  },
+  {
+    "id": "ep_seed_06",
+    "firstSeen": "2026-03-25T00:00:00Z",
+    "lastSeen": "2026-03-25T00:00:00Z",
+    "count": 1,
+    "toolName": "crm_soql_query",
+    "errorSignature": "crm_soql_query::opportunity amount field is money not amount",
+    "rootCause": "opportunity 的金额字段是 money，不是 amount。amount 是 order 和 quoteLine 的字段。",
+    "correctApproach": "opportunity 查询金额用 money 字段。order 和 quoteLine 用 amount 字段。",
+    "category": "field-name"
+  },
+  {
+    "id": "ep_seed_07",
+    "firstSeen": "2026-03-25T00:00:00Z",
+    "lastSeen": "2026-03-25T00:00:00Z",
+    "count": 1,
+    "toolName": "crm_create_record",
+    "errorSignature": "crm_create_record::ownerId set to wrong user",
+    "rootCause": "之前 ownerId 没有自动注入，系统默认可能不是当前登录用户。",
+    "correctApproach": "现已修复：createRecord 自动注入当前登录用户为 ownerId。如需指定其他人，显式传 ownerId 参数。",
+    "category": "permission"
+  },
+  {
+    "id": "ep_seed_08",
+    "firstSeen": "2026-03-25T00:00:00Z",
+    "lastSeen": "2026-03-25T00:00:00Z",
+    "count": 2,
+    "toolName": "crm_query_accounts",
+    "errorSignature": "crm_query_accounts::customer name ambiguous or abbreviated",
+    "rootCause": "客户名可能重复或用户只给简称，前缀搜索可能返回多条或零条结果。",
+    "correctApproach": "优先使用 crm_smart_find_account 工具（支持客户名+手机号+UID 多路径查找）。搜索结果多条时列出候选让用户确认。零条时让用户提供手机号或 UID 辅助定位。",
+    "category": "other"
+  },
+  {
+    "id": "ep_seed_09",
+    "firstSeen": "2026-03-26T00:00:00Z",
+    "lastSeen": "2026-03-26T00:00:00Z",
+    "count": 1,
+    "toolName": "crm_smart_find_account",
+    "errorSignature": "crm_smart_find_account::multi-path customer lookup strategy",
+    "rootCause": "客户名不一定准确（简称、重名），但手机号和UID可以通过关联对象精确定位客户：contact.mobile→accountId，ShroffAccount__c.name/userAccount__c/uid__c→Account__c。",
+    "correctApproach": "当客户名搜不到或结果太多时，让用户提供手机号或UID。用 crm_smart_find_account(phone/uid) 通过联系人或EEO账号反查客户。ShroffAccount__c的关键字段：name(手机号)、userAccount__c(账号)、uid__c(UID)、Account__c(关联客户ID)。",
+    "category": "other"
+  }
+]

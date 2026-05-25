@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.production
+logs/sessions/
+data/
+*.log
+package-lock.json
+.DS_Store
+.claude/

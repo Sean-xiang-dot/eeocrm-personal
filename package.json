@@ -1,0 +1,37 @@
+{
+  "name": "eeocrm-personal",
+  "version": "2.0.0",
+  "description": "eeoCRM 个人版 MCP Server — 个人 OAuth 认证，操作归属你本人",
+  "main": "dist/index.js",
+  "bin": {
+    "eeocrm-personal": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx index.ts",
+    "login": "node login-tencent.mjs da7de9b1f2ad25cd765808611f84fd0c",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "open": "^10.2.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}
