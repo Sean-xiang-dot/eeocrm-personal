@@ -127,8 +127,8 @@
     "count": 1,
     "toolName": "crm_soql_query",
     "errorSignature": "crm_soql_query::SOQL and XOQL are the same thing",
-    "rootCause": "销售易官方把查询语言称为 XOQL（通过 neocrm CLI 的 data:query 命令），底层 REST API 路径是 GET /rest/data/v2/query?q={语句}。语法完全是 Salesforce SOQL 风格：SELECT fields FROM object WHERE conditions ORDER BY field LIMIT offset,count。我们代码里叫 SOQL，官方叫 XOQL，本质是同一个东西。",
-    "correctApproach": "和官方沟通时说 XOQL，自己代码里叫 SOQL 也行。注意 API 路径是 /rest/data/v2/query（v2 不是 v2.0），CRUD 路径是 /rest/data/v2.0/xobjects/{apiKey}。",
+    "rootCause": "销售易官方把查询语言称为 XOQL，语法风格源自 Salesforce SOQL（SELECT fields FROM object WHERE conditions），但限制比 SOQL 多得多：① LIKE 只支持后置通配 'keyword%'，不支持 '%keyword%'；② 不支持 GROUP BY / 聚合函数（COUNT/SUM/AVG）；③ 不支持 SELECT *，必须逐字段列出；④ 单次最多 100 条；⑤ queryable: false 的字段不能用于 WHERE；⑥ date/datetime 条件必须用毫秒时间戳。底层 REST API 路径 GET /rest/data/v2/query?q={语句}。",
+    "correctApproach": "和官方沟通时说 XOQL，自己代码里叫 SOQL 也行（我们的方法名是 soqlQuery）。但注意 XOQL 限制更严格：不能 %keyword%（用代码端过滤替代）、不能 GROUP BY（客户端汇总）、不能 SELECT *（必须列字段）。全模糊搜索替代方案：先取全部再代码过滤，或多个后置通配 OR 拼接。",
     "category": "other"
   },
   {

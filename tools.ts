@@ -129,8 +129,10 @@ export function registerTools(server: McpServer, client: XiaoshouyiClient) {
 常用标准对象 apiKey: account(客户), contact(联系人), opportunity(商机), lead(线索), task(任务), schedule(日程), activityrecord(活动记录), order(订单), quote(报价单), contract(合同), case(服务工单), product(产品)。
 自定义对象以 __c 结尾，如 Event__c。
 字段名使用 apiKey（如 id, accountName, ownerId），不确定字段名时先用 crm_describe_fields 查询。
-⚠ LIKE 仅支持前缀匹配: accountName LIKE '华为%'（不支持 '%华为%'）。
+⚠ XOQL 比 Salesforce SOQL 限制更严: 不支持 SELECT *、不支持聚合函数(COUNT/SUM/AVG)、不支持子查询。
+⚠ LIKE 仅支持后置通配: accountName LIKE '华为%'（不支持 '%华为%'）。全模糊搜索替代：取出后代码过滤，或多个 OR LIKE 拼接。
 ⚠ 不支持 GROUP BY，需在客户端侧汇总。
+⚠ queryable: false 的字段不能用于 WHERE（先用 crm_describe_fields 确认）。
 ⚠ ownerName 不是有效字段！要查负责人名称，先查 ownerId，再用 SELECT id, name FROM user WHERE id = <ownerId> 解析。
 ⚠ 查"我的"数据必须显式加 WHERE ownerId = '<我的userId>'，不会自动过滤。
 ⚠ 分页语法: LIMIT offset,count（如 LIMIT 100,100 取第二页），单次最多 100 条。
