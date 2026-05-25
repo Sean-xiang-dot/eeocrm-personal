@@ -15,6 +15,7 @@
     "start": "node dist/index.js",
     "dev": "tsx index.ts",
     "login": "node login-tencent.mjs da7de9b1f2ad25cd765808611f84fd0c",
+    "update": "git pull origin main && npm install",
     "prepublishOnly": "npm run build"
   },
   "engines": {
