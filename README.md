@@ -12,8 +12,8 @@
 
 ```bash
 # 1. 克隆仓库
-git clone <本仓库地址>
-cd eeoCRM-personal
+git clone https://github.com/Sean-xiang-dot/eeocrm-personal.git
+cd eeocrm-personal
 
 # 2. 安装依赖
 npm install
@@ -26,6 +26,13 @@ npm run login
 npm run dev
 # → ✅ eeoCRM Personal MCP Server 启动
 #      SSE 端点: http://localhost:3001/sse
+```
+
+## 更新
+
+```bash
+# 一键拉取最新代码并安装依赖
+npm run update
 ```
 
 ## 在 AI 工具中配置
