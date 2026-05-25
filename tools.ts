@@ -131,7 +131,9 @@ export function registerTools(server: McpServer, client: XiaoshouyiClient) {
 字段名使用 apiKey（如 id, accountName, ownerId），不确定字段名时先用 crm_describe_fields 查询。
 ⚠ LIKE 仅支持前缀匹配: accountName LIKE '华为%'（不支持 '%华为%'）。
 ⚠ 不支持 GROUP BY，需在客户端侧汇总。
+⚠ ownerName 不是有效字段！要查负责人名称，先查 ownerId，再用 SELECT id, name FROM user WHERE id = <ownerId> 解析。
 名称字段速查: account→accountName, contact→contactName, opportunity→opportunityName, lead→name, product→productName, priceBook→name, order→用id。
+常用关联字段: ownerId(负责人 ID, 所有对象通用), createdBy(创建人 ID), phone(客户电话, account 上)。
 示例: SELECT id, accountName FROM account WHERE accountName LIKE '华为%' LIMIT 20`,
     {
       soql: z.string().describe(

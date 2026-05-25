@@ -125,6 +125,8 @@ export function registerResources(server: McpServer, client: XiaoshouyiClient) {
 - SOQL: \`GET /rest/data/v2/query\` (v2 不是 v2.0)
 - CRUD: \`/rest/data/v2.0/xobjects/{apiKey}\`
 - 创建记录需要 entityType + dimDepart，工具已自动填充
+- **ownerName 不存在**！要查负责人姓名，先查 ownerId，再 \`SELECT id, name FROM user WHERE id = <ownerId>\`
+- 数据权限由登录账号决定，无 impersonate/runAs 机制。如需按用户过滤，应用层加 WHERE ownerId 条件
 `;
       return {
         contents: [{

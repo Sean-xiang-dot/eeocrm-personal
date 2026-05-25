@@ -97,5 +97,27 @@
     "rootCause": "客户名不一定准确（简称、重名），但手机号和UID可以通过关联对象精确定位客户：contact.mobile→accountId，ShroffAccount__c.name/userAccount__c/uid__c→Account__c。",
     "correctApproach": "当客户名搜不到或结果太多时，让用户提供手机号或UID。用 crm_smart_find_account(phone/uid) 通过联系人或EEO账号反查客户。ShroffAccount__c的关键字段：name(手机号)、userAccount__c(账号)、uid__c(UID)、Account__c(关联客户ID)。",
     "category": "other"
+  },
+  {
+    "id": "ep_seed_10",
+    "firstSeen": "2026-05-25T00:00:00Z",
+    "lastSeen": "2026-05-25T00:00:00Z",
+    "count": 1,
+    "toolName": "crm_soql_query",
+    "errorSignature": "crm_soql_query::column not exist[ownername]",
+    "rootCause": "ownerName 不是销售易任何对象的有效字段。负责人信息存储为 ownerId（数字ID），需要通过 user 表关联查询才能得到姓名。",
+    "correctApproach": "先查 ownerId 字段，再用 SELECT id, name FROM user WHERE id IN (ownerId1, ownerId2, ...) 批量解析为姓名。所有标准对象都有 ownerId 字段，但都没有 ownerName。",
+    "category": "field-name"
+  },
+  {
+    "id": "ep_seed_11",
+    "firstSeen": "2026-05-25T00:00:00Z",
+    "lastSeen": "2026-05-25T00:00:00Z",
+    "count": 1,
+    "toolName": "crm_soql_query",
+    "errorSignature": "crm_soql_query::password grant gives full data access regardless of user role",
+    "rootCause": "销售易 OAuth2 password grant 登录后，数据权限由登录账号决定。用管理员账号（如 crm@eeoa.com）登录则能看到所有数据。没有 impersonate/runAs 机制，无法以其他用户身份代理查询。",
+    "correctApproach": "如需按用户权限过滤数据，只能在应用层做：查询时加 WHERE ownerId = <userId> 条件，或查询全量后在返回前过滤。不要期望 API 自动做数据权限隔离（除非用该用户自己的账号密码登录）。",
+    "category": "permission"
   }
 ]
