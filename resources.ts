@@ -4,6 +4,106 @@ import { readErrorPatterns, readSessionSummaries } from "./logger.js";
 
 export function registerResources(server: McpServer, client: XiaoshouyiClient) {
 
+  // ── 快速指南（Agent 优先读取） ────────────────────────
+  // URI: xiaoshouyi://guide
+  server.resource(
+    "quick-guide",
+    "xiaoshouyi://guide",
+    { description: "⭐ 必读：CRM 常用场景路由表。告诉你该用哪个工具、传什么字段，避免绕圈。连接后第一时间阅读此资源。", mimeType: "text/markdown" },
+    async (uri) => {
+      const guide = `# CRM 快速指南（场景 → 工具 → 字段）
+
+> 连接后先读这份指南，不要盲目调 crm_list_objects 或 crm_describe_fields 探索。
+
+## 常用对象速查（只列日常用到的）
+
+| 用户说的 | apiKey | 关键字段 |
+|---|---|---|
+| 客户/公司 | account | accountName, ownerId, entityType, phone, RecentVisitDate__c, AccountTypeJJ__c |
+| 联系人 | contact | contactName, mobile, email, accountId, contactRole |
+| 商机 | opportunity | opportunityName, money(⚠️不是amount), accountId, saleStageId, closeDate |
+| 订单 | order | orderEntityRelAccount, orderAmount, transactionDate, entityType=11010003500001(销售订单) |
+| EEO账号 | ShroffAccount__c | uid__c, schoolName__c, Account__c, expireTime__c, service_version__c(1=免费忽略), serviceState__c(1=活跃), currencyShow__c(余额/元) |
+| 收款计划 | CollectionPlan__c | EstimatedTime__c, collectStatus__c, Amount__c, accountId |
+| 活动记录 | activityrecord | content, startTime, dbcRelation26(客户ID), ownerId, entityType(类型) |
+| 线索 | lead | name, companyName, mobile, email, status |
+
+## 场景路由表
+
+### 找客户
+- 知道名称 → \`crm_smart_find_account(keyword: "xx")\`
+- 知道手机号 → \`crm_smart_find_account(phone: "138...")\`
+- 知道 UID → \`crm_smart_find_account(uid: "12345")\`
+
+### 客户全貌
+→ \`crm_account_360(accountId: "xxx")\`
+返回：基本信息 + 联系人 + 商机 + 订单 + 报价单
+
+### EEO 账号健康
+→ \`crm_eeo_account_health(accountId: "xxx")\` 或 \`crm_eeo_account_health(uid: "12345")\`
+返回：到期时间、余额、课时余量
+
+### 查活动记录/拜访
+→ \`crm_soql_query\` + SQL:
+\`\`\`sql
+SELECT id, content, startTime, entityType, ownerId
+FROM activityrecord WHERE dbcRelation26 = '{客户ID}'
+ORDER BY startTime DESC LIMIT 20
+\`\`\`
+
+### 查即将到期的付费 EEO 账号
+→ \`crm_soql_query\` + SQL:
+\`\`\`sql
+SELECT id, uid__c, schoolName__c, expireTime__c, Account__c
+FROM ShroffAccount__c
+WHERE service_version__c != 1 AND serviceState__c = 1
+  AND expireTime__c <= NEXT_N_DAYS:60 AND expireTime__c >= TODAY
+\`\`\`
+
+### 查回款计划
+→ \`crm_soql_query\` + SQL:
+\`\`\`sql
+SELECT id, EstimatedTime__c, Amount__c, collectStatus__c
+FROM CollectionPlan__c WHERE accountId = '{客户ID}'
+ORDER BY EstimatedTime__c DESC
+\`\`\`
+
+### 商机详情（含报价和订单）
+→ \`crm_opportunity_detail(opportunityId: "xxx")\`
+
+### 创建/更新记录
+→ \`crm_create_record\` / \`crm_update_record\`（必须用户确认后才调用）
+
+### 查某字段的枚举值含义
+→ \`crm_entity_type_map(objectApiKey: "account")\`
+
+## 关键规则
+
+1. **EEO 账号排除免费版**：所有 ShroffAccount__c 查询加 \`WHERE service_version__c != 1\`
+2. **金额字段**：opportunity 用 \`money\`（不是 amount）；余额展示用 \`currencyShow__c\`（元）
+3. **时间字段**：全部是毫秒时间戳，显示时 +8h 转北京时间
+4. **LIKE 只支持前缀**：\`accountName LIKE '华为%'\` ✅，\`'%华为%'\` ❌
+5. **不支持 GROUP BY**：聚合需客户端处理
+6. **ID 传字符串**：reference/owner 类型 ID 必须用字符串（JS 大数精度）
+7. **分页**：\`LIMIT offset,count\`，单次最多 100 条
+
+## 不要做的事
+
+- ❌ 不要调 crm_list_objects 去"探索有什么对象"——上面已列全了常用的
+- ❌ 不要调 crm_describe_fields 去"看字段"——除非用户明确要查某个不在上表的字段
+- ❌ 不要用 crm_query_records 代替 crm_soql_query——后者更灵活且你能控制字段
+- ❌ 不要查 ShroffAccount__c 时忘记排除 service_version__c = 1
+`;
+      return {
+        contents: [{
+          uri: uri.href,
+          mimeType: "text/markdown",
+          text: guide,
+        }],
+      };
+    }
+  );
+
   // ── 字段定义模板资源 ──────────────────────────────────
   // URI: xiaoshouyi://objects/{objectApiKey}/fields
   server.resource(
