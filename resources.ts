@@ -21,12 +21,14 @@ export function registerResources(server: McpServer, client: XiaoshouyiClient) {
 |---|---|---|
 | 客户/公司 | account | accountName, ownerId, entityType, phone, RecentVisitDate__c, AccountTypeJJ__c |
 | 联系人 | contact | contactName, mobile, email, accountId, contactRole |
-| 商机 | opportunity | opportunityName, money(⚠️不是amount), accountId, saleStageId, closeDate |
+| **销售绩效/业绩** | SalesPerformance__c | amount_Collected__c(绩效金额), GetDate__c(到款日期), type__c(绩效类型), product_famliy__c(产品标签), new_or_addon__c(新签续费), Account__c(客户), ShroffAccount__c(EEO账号), IsCheckedOver__c(核销标记), AccountGet__c(=0有效) |
+| **收款** | Collection__c | Amount__c(金额), ActualTime__c(⭐财务确认日期=主要日期), CollectionDate__c(回款日期,不常用), approvalStatus(审批状态:1=通过), Contract__c(订单), orderAccountId__c(客户) |
 | 订单 | order | orderEntityRelAccount, orderAmount, transactionDate, entityType=11010003500001(销售订单) |
 | EEO账号 | ShroffAccount__c | uid__c, schoolName__c, Account__c, expireTime__c, service_version__c(1=免费忽略), serviceState__c(1=活跃), currencyShow__c(余额/元) |
 | 收款计划 | CollectionPlan__c | EstimatedTime__c, collectStatus__c, Amount__c, accountId |
 | 活动记录 | activityrecord | content, startTime, dbcRelation26(客户ID), ownerId, entityType(类型) |
 | 线索 | lead | name, companyName, mobile, email, status |
+| 商机(弱化) | opportunity | opportunityName, money(⚠️不是amount), accountId, saleStageId, closeDate — **除非用户明确提到商机，否则不要主动查询** |
 
 ## 场景路由表
 
@@ -68,8 +70,40 @@ FROM CollectionPlan__c WHERE accountId = '{客户ID}'
 ORDER BY EstimatedTime__c DESC
 \`\`\`
 
-### 商机详情（含报价和订单）
+### 查业绩/销售绩效（最常用）
+→ \`crm_soql_query\` + SQL:
+\`\`\`sql
+-- 某销售的绩效（排除已核销）
+SELECT id, amount_Collected__c, GetDate__c, type__c, product_famliy__c, new_or_addon__c, Account__c
+FROM SalesPerformance__c
+WHERE OwnerId = '{销售ID}' AND IsCheckedOver__c != 1 AND AccountGet__c = 0
+ORDER BY GetDate__c DESC LIMIT 50
+
+-- 某客户的绩效
+SELECT id, amount_Collected__c, GetDate__c, type__c, product_famliy__c, new_or_addon__c
+FROM SalesPerformance__c
+WHERE Account__c = '{客户ID}' AND IsCheckedOver__c != 1 AND AccountGet__c = 0
+ORDER BY GetDate__c DESC LIMIT 20
+\`\`\`
+⚠️ 看业绩金额用 \`amount_Collected__c\`（绩效金额），不是 \`Amount__c\`（订单金额）
+⚠️ 过滤条件：\`IsCheckedOver__c != 1\`（排除核销）+ \`AccountGet__c = 0\`（有效绩效）
+
+### 查收款
+→ \`crm_soql_query\` + SQL:
+\`\`\`sql
+-- 某客户的收款（已审批通过的）
+SELECT id, Amount__c, ActualTime__c, CollectionDate__c, Contract__c, approvalStatus
+FROM Collection__c
+WHERE orderAccountId__c = '{客户ID}' AND approvalStatus = 1
+ORDER BY ActualTime__c DESC LIMIT 20
+\`\`\`
+⚠️ 日期优先用 \`ActualTime__c\`（财务确认日期）——这是公司内部核算日期，几乎所有场景都取这个
+⚠️ \`CollectionDate__c\`（回款日期）是实际款到日期，不常用
+⚠️ 审批状态：0=草稿, 1=通过, 3=审批中, 4=驳回
+
+### 商机详情（仅用户明确要求时）
 → \`crm_opportunity_detail(opportunityId: "xxx")\`
+注意：日常看业绩不用商机，商机是销售过程管理用的。看业绩用 SalesPerformance__c。
 
 ### 创建/更新记录
 → \`crm_create_record\` / \`crm_update_record\`（必须用户确认后才调用）
@@ -93,6 +127,47 @@ ORDER BY EstimatedTime__c DESC
 - ❌ 不要调 crm_describe_fields 去"看字段"——除非用户明确要查某个不在上表的字段
 - ❌ 不要用 crm_query_records 代替 crm_soql_query——后者更灵活且你能控制字段
 - ❌ 不要查 ShroffAccount__c 时忘记排除 service_version__c = 1
+- ❌ 不要主动查商机——除非用户明确说"商机"。看业绩用 SalesPerformance__c
+- ❌ 不要用 CollectionDate__c 当"收款日期"——用 ActualTime__c（财务确认日期）
+- ❌ 不要把 Amount__c 当绩效金额——绩效金额是 amount_Collected__c
+
+## 业务逻辑（二开代码总结）
+
+### 收款→绩效的生成关系
+收款(\`Collection__c\`)审批通过后，系统自动生成销售绩效(\`SalesPerformance__c\`)：
+- 绩效的 \`GetDate__c\`(到款日期) = 收款审批通过时的系统时间
+- 绩效的 \`SalesRepect__c\` = 关联的收款ID
+- 绩效的 \`amount_Collected__c\` = 按订单明细比例分摊的金额
+- 一笔收款可能生成多条绩效（按订单明细拆分）
+
+### 绩效核销规则
+- \`IsCheckedOver__c = 1\` → 已核销，忽略此条绩效
+- \`AccountGet__c != 0\` → 无效绩效，忽略
+- 负金额(\`amount_Collected__c < 0\`) = 退费冲回
+
+### 绩效类型(type__c)常用值
+| 值 | 含义 | 值 | 含义 |
+|---|---|---|---|
+| 6 | 续费 | 7 | 退费 |
+| 2 | 2K新签 | 3 | 5K新签 |
+| 4 | 1W新签 | 5 | 10W新签 |
+| 24 | 50W新签 | 16 | 硬件新签 |
+| 33 | CamIn新签 | 34 | CamIn续费 |
+| 35 | Classin增购新签 | 36 | Classin增购续费 |
+
+### product_famliy__c 常用值
+\`"Classin"\` / \`"Classin增购"\` / \`"硬件"\`
+
+### new_or_addon__c / NewOrOldSP__c
+\`"新客"\` / \`"老客"\` / \`"增购"\` / \`"-"\`
+
+### 收款审批状态(approvalStatus)
+| 值 | 含义 |
+|---|---|
+| 0 | 草稿/未提交 |
+| 1 | 审批通过 |
+| 3 | 审批中 |
+| 4 | 驳回 |
 `;
       return {
         contents: [{
